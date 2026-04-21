@@ -1,5 +1,9 @@
 # 📸 InstaScope
+## 🚀 Try It Instantly (No Download)
 
+👉 https://fgradeartist.github.io/instascope/
+
+Just open and drop your Instagram ZIP file.
 > **Instagram Account Analyzer** — 100% offline. No API key. No login. Just drop your Instagram ZIP.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
