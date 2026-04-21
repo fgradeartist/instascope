@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InstaScope — Instagram Account Analyzer</title>
+<style>
+  :root {
+    --bg: #0d1117; --card: #161b22; --border: #30363d;
+    --accent: #e1306c; --accent2: #833ab4; --text: #f0f6fc;
+    --sub: #8b949e; --green: #3fb950; --yellow: #d29922;
+    --red: #f85149; --blue: #58a6ff; --white: #ffffff;
+    --teal: #39d353;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* Header */
+  .header { background: var(--card); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .header-left { display: flex; align-items: baseline; gap: 12px; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header .ver { font-size: 12px; color: var(--sub); }
+  .header .tagline { font-size: 12px; color: var(--sub); }
+
+  /* Drop zone */
+  .drop-section { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; }
+  .drop-zone {
+    border: 2px dashed var(--green); border-radius: 10px;
+    padding: 28px 20px; text-align: center; cursor: pointer;
+    transition: all .2s; background: rgba(63,185,80,.04);
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { background: rgba(63,185,80,.10); border-color: #58e06a; }
+  .drop-zone.loaded { border-color: var(--green); background: rgba(63,185,80,.07); }
+  .drop-zone.loaded .dz-icon { font-size: 32px; }
+  .dz-icon { font-size: 36px; margin-bottom: 10px; }
+  .dz-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .dz-sub { font-size: 12px; color: var(--sub); margin-bottom: 14px; }
+  .dz-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  #file-input { display: none; }
+
+  /* Buttons */
+  .btn { padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn-green  { background: var(--green);   color: #0d1117; }
+  .btn-accent { background: var(--accent);  color: white; }
+  .btn-blue   { background: var(--blue);    color: #0d1117; }
+  .btn-dark   { background: #21262d;        color: var(--text); }
+  .btn-red    { background: var(--red);     color: white; }
+
+  /* Pills */
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; background: #21262d; color: var(--sub); white-space: nowrap; }
+  .pill.loaded { color: var(--text); }
+
+  /* Stats */
+  .stats-row { display: flex; gap: 10px; padding: 12px 24px; flex-wrap: wrap; overflow-x: auto; }
+  .stat-card { background: var(--card); border-radius: 8px; padding: 12px 16px; min-width: 120px; }
+  .stat-val { font-size: 26px; font-weight: 700; }
+  .stat-lbl { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+  /* Tabs */
+  .tab-bar { display: flex; padding: 6px 24px 0; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+  .tab-bar::-webkit-scrollbar { height: 3px; }
+  .tab-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .tab { padding: 8px 14px; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 12px; color: var(--sub); white-space: nowrap; background: transparent; border: none; }
+  .tab:hover { color: var(--text); background: #1c2128; }
+  .tab.active { background: var(--accent); color: white; }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 24px; }
+  .search-wrap { position: relative; flex: 1; max-width: 420px; }
+  .search-wrap input { width: 100%; padding: 7px 12px 7px 34px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; outline: none; }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--sub); }
+  .count-lbl { font-size: 12px; color: var(--sub); margin-left: auto; }
+
+  /* Table */
+  .table-wrap { overflow: auto; padding: 0 24px 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; padding: 8px 10px; font-size: 11px; color: var(--sub); font-weight: 600; background: #1c2128; cursor: pointer; user-select: none; white-space: nowrap; }
+  thead th:hover { color: var(--text); }
+  thead th .sort-arrow { opacity: .5; margin-left: 4px; }
+  tbody tr:nth-child(even) { background: #1c2128; }
+  tbody tr:nth-child(odd)  { background: var(--card); }
+  tbody tr:hover { background: #1f2937; }
+  tbody td { padding: 7px 10px; font-size: 13px; vertical-align: middle; }
+  tbody td.num { color: var(--sub); font-size: 11px; width: 40px; }
+  tbody td.username { font-weight: 600; }
+  tbody td.link a { color: var(--blue); text-decoration: none; font-size: 12px; }
+  tbody td.link a:hover { text-decoration: underline; }
+  tbody td.date { color: var(--sub); font-size: 11px; white-space: nowrap; }
+  tbody td.days { color: var(--sub); font-size: 11px; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--sub); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; }
+
+  /* Footer */
+  .footer { background: var(--card); border-top: 1px solid var(--border); padding: 10px 24px; font-size: 11px; color: var(--sub); text-align: center; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #1f6feb; color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 700px; width: 94%; max-height: 85vh; overflow-y: auto; }
+  .modal h2 { margin-bottom: 14px; font-size: 16px; }
+  .modal pre { background: var(--bg); padding: 14px; border-radius: 8px; font-size: 12px; color: var(--sub); overflow-x: auto; white-space: pre-wrap; line-height: 1.7; }
+  .modal-close { float: right; background: none; border: none; color: var(--sub); font-size: 20px; cursor: pointer; margin-top: -4px; }
+
+  /* Chart panel */
+  .chart-section { display: none; padding: 16px 24px; }
+  .chart-section.open { display: block; }
+  .chart-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  canvas { max-width: 100%; }
+
+  @media (max-width: 700px) {
+    .stats-row { gap: 6px; padding: 10px 12px; }
+    .stat-card { min-width: 90px; padding: 8px 10px; }
+    .stat-val { font-size: 20px; }
+    .toolbar, .table-wrap { padding-left: 12px; padding-right: 12px; }
+    .tab-bar { padding: 6px 12px 0; }
+    .drop-section { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <h1>📸 InstaScope</h1>
+    <span class="ver">v2.0</span>
+    <span class="tagline">Instagram Account Analyzer</span>
+  </div>
+  <span style="font-size:11px;color:var(--sub)">100% offline · runs in your browser · no login needed</span>
+</div>
+
+<!-- Drop Zone -->
+<div class="drop-section">
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="dz-icon" id="dz-icon">📂</div>
+    <div class="dz-title" id="dz-title">Drop your Instagram ZIP here</div>
+    <div class="dz-sub" id="dz-sub">or click to select a ZIP file</div>
+    <div class="dz-btns" onclick="event.stopPropagation()">
+      <button class="btn btn-green" onclick="document.getElementById('file-input').click()">📦 Select ZIP</button>
+      <button class="btn btn-blue"  onclick="document.getElementById('folder-input').click()">📁 Select Files</button>
+      <button class="btn btn-dark"  onclick="toggleCharts()">📊 Charts</button>
+      <button class="btn btn-dark"  onclick="exportCSV()">💾 Export CSV</button>
+      <button class="btn btn-dark"  onclick="copyAll()">📋 Copy All</button>
+      <button class="btn btn-dark"  onclick="showLog()">🗂 Load Log</button>
+    </div>
+    <input type="file" id="file-input" accept=".zip" onchange="handleZipFile(this.files[0])">
+    <input type="file" id="folder-input" accept=".json" multiple onchange="handleJsonFiles(this.files)">
+  </div>
+  <div class="pills" id="pills"></div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row" id="stats-row">
+  <div class="stat-card"><div class="stat-val" id="s-followers" style="color:var(--accent2)">—</div><div class="stat-lbl">Followers</div></div>
+  <div class="stat-card"><div class="stat-val" id="s-following" style="color:var(--accent)">—</div><div class="stat-lbl">Following</div></div>
+  <div class="stat-card"><div class="stat-val" id="s-nfb"       style="color:var(--red)">—</div><div class="stat-lbl">Not Following Back</div></div>
+  <div class="stat-card"><div class="stat-val" id="s-fans"      style="color:var(--green)">—</div><div class="stat-lbl">Your Fans</div></div>
+  <div class="stat-card"><div class="stat-val" id="s-mutual"    style="color:var(--yellow)">—</div><div class="stat-lbl">Mutual</div></div>
+  <div class="stat-card"><div class="stat-val" id="s-ratio"     style="color:var(--blue)">—</div><div class="stat-lbl">Follow-back Ratio</div></div>
+  <div class="stat-card"><div class="stat-val" id="s-ghost"     style="color:var(--sub)">—</div><div class="stat-lbl">Ghost Followers</div></div>
+  <div class="stat-card"><div class="stat-val" id="s-pending"   style="color:var(--accent2)">—</div><div class="stat-lbl">Pending Sent</div></div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar" id="tab-bar"></div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="search-wrap">
+    <span class="search-icon">🔎</span>
+    <input type="text" id="search" placeholder="Search username…" oninput="refreshTable()">
+  </div>
+  <span class="count-lbl" id="count-lbl"></span>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table id="main-table">
+    <thead>
+      <tr>
+        <th onclick="sortBy('#')">#<span class="sort-arrow" id="sa-#"></span></th>
+        <th onclick="sortBy('Username')">Username<span class="sort-arrow" id="sa-Username"></span></th>
+        <th onclick="sortBy('Profile Link')">Profile Link<span class="sort-arrow" id="sa-Profile Link"></span></th>
+        <th onclick="sortBy('Date')">Date<span class="sort-arrow" id="sa-Date"></span></th>
+        <th onclick="sortBy('Days Ago')">Days Ago<span class="sort-arrow" id="sa-Days Ago"></span></th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+  <div class="empty-state" id="empty-state">
+    <div class="icon">📂</div>
+    <p>Upload your Instagram data export to get started.</p>
+    <p style="margin-top:8px;font-size:12px">Settings → Account → Download Your Data → JSON format</p>
+  </div>
+</div>
+
+<!-- Charts section -->
+<div class="chart-section" id="chart-section">
+  <div class="chart-tabs" id="chart-tabs"></div>
+  <canvas id="chart-canvas" height="320"></canvas>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  Double-click username → open Instagram profile &nbsp;•&nbsp;
+  All data is processed locally in your browser &nbsp;•&nbsp;
+  Nothing is uploaded anywhere &nbsp;•&nbsp;
+  <a href="https://github.com" style="color:var(--blue)">InstaScope on GitHub</a>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Log Modal -->
+<div class="modal-overlay" id="log-modal" onclick="this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="document.getElementById('log-modal').classList.remove('open')">×</button>
+    <h2>📋 File Load Log</h2>
+    <pre id="log-content">No export loaded yet.</pre>
+  </div>
+</div>
+
+<!-- JSZip CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<script>
+// ═══════════════════════ STATE ═══════════════════════════════════════════════
+const STATE = {
+  followers: [], following: [], unfollowed: [], hide_story: [],
+  pending_requests: [], recent_requests: [], removed_suggestions: [],
+};
+const FILE_NAMES = {
+  followers:           "followers_1.json",
+  following:           "following.json",
+  unfollowed:          "recently_unfollowed_profiles.json",
+  hide_story:          "hide_story_from.json",
+  pending_requests:    "pending_follow_requests.json",
+  recent_requests:     "recent_follow_requests.json",
+  removed_suggestions: "removed_suggestions.json",
+};
+const FILE_LABELS = {
+  followers:           ["👥 Followers",           "var(--green)"],
+  following:           ["➡️ Following",            "var(--accent)"],
+  unfollowed:          ["🕐 Unfollowed",           "var(--yellow)"],
+  hide_story:          ["🙈 Story Hiders",         "var(--blue)"],
+  pending_requests:    ["⏳ Pending Sent",          "var(--accent2)"],
+  recent_requests:     ["📨 Recent Requests",      "var(--teal, #39d353)"],
+  removed_suggestions: ["🚫 Removed Suggestions",  "var(--sub)"],
+};
+const loadLog = {};
+let currentTab  = "not_following_back";
+let sortCol     = null;
+let sortReverse = false;
+let chartInstance = null;
+
+const TABS = [
+  ["not_following_back",  "❌ Not Following Back"],
+  ["fans",                "💛 Your Fans"],
+  ["mutual",              "✅ Mutual"],
+  ["ghost_followers",     "👻 Ghost Followers"],
+  ["story_hiders",        "🙈 Story Hiders"],
+  ["recently_unfollowed", "🕐 Recently Unfollowed"],
+  ["pending_requests",    "⏳ Pending Sent"],
+  ["recent_requests",     "📨 Recent Requests"],
+  ["removed_suggestions", "🚫 Removed Suggestions"],
+  ["all_followers",       "👥 All Followers"],
+  ["all_following",       "➡️ All Following"],
+];
+
+// ═══════════════════════ INIT ════════════════════════════════════════════════
+function init() {
+  buildTabs();
+  buildPills();
+  refreshTable();
+  setupDragDrop();
+}
+
+function buildTabs() {
+  const bar = document.getElementById("tab-bar");
+  bar.innerHTML = "";
+  TABS.forEach(([key, label]) => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (key === currentTab ? " active" : "");
+    btn.textContent = label;
+    btn.onclick = () => switchTab(key);
+    btn.id = "tab-" + key;
+    bar.appendChild(btn);
+  });
+}
+
+function buildPills() {
+  const c = document.getElementById("pills");
+  c.innerHTML = "";
+  Object.entries(FILE_LABELS).forEach(([key, [label, color]]) => {
+    const p = document.createElement("span");
+    p.className = "pill";
+    p.id = "pill-" + key;
+    p.textContent = "○ " + label;
+    c.appendChild(p);
+  });
+}
+
+function switchTab(key) {
+  currentTab = key;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  const btn = document.getElementById("tab-" + key);
+  if (btn) btn.classList.add("active");
+  document.getElementById("search").value = "";
+  refreshTable();
+}
+
+// ═══════════════════════ PARSER ══════════════════════════════════════════════
+function parseUsers(raw) {
+  let data;
+  try { data = typeof raw === "string" ? JSON.parse(raw) : raw; }
+  catch(e) { return []; }
+
+  const entries = [];
+  function extract(node) {
+    if (Array.isArray(node)) {
+      node.forEach(extract);
+    } else if (node && typeof node === "object") {
+      const sld   = node.string_list_data || [];
+      const title = node.title || "";
+      sld.forEach(s => {
+        const href  = s.href  || "";
+        const value = (s.value || title || href.replace(/\/$/, "").split("/").pop() || "").trim();
+        const ts    = s.timestamp || 0;
+        if (value || href) entries.push({ username: value, href, timestamp: ts });
+      });
+      Object.values(node).forEach(v => {
+        if (Array.isArray(v) || (v && typeof v === "object")) extract(v);
+      });
+    }
+  }
+  extract(data);
+
+  const seen = new Set(), result = [];
+  entries.forEach(e => {
+    const key = e.username || e.href;
+    if (key && !seen.has(key)) { seen.add(key); result.push(e); }
+  });
+  return result;
+}
+
+function filenameToKey(filename) {
+  filename = filename.toLowerCase().replace(/\\/g, "/");
+  const base = filename.split("/").pop();
+  return Object.entries(FILE_NAMES).find(([, v]) => v === base)?.[0] || null;
+}
+
+// ═══════════════════════ FILE LOADING ════════════════════════════════════════
+async function handleZipFile(file) {
+  if (!file) return;
+  if (typeof JSZip === "undefined") {
+    toast("JSZip library not loaded. Check your internet connection.");
+    return;
+  }
+  updateDZ("⏳", "Reading ZIP…", file.name, false);
+  try {
+    const zip = await JSZip.loadAsync(file);
+    let found = 0;
+    const keys = Object.keys(FILE_NAMES);
+
+    for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
+      if (zipEntry.dir) continue;
+      const base = zipPath.split("/").pop();
+      const key  = filenameToKey(base);
+      if (key) {
+        const text = await zipEntry.async("string");
+        STATE[key] = parseUsers(text);
+        loadLog[key] = zipPath;
+        found++;
+      }
+      // extra followers_N.json
+      if (base.startsWith("followers_") && base.endsWith(".json") && base !== "followers_1.json") {
+        const text  = await zipEntry.async("string");
+        const extra = parseUsers(text);
+        const existing = new Set(STATE.followers.map(u => u.username));
+        extra.forEach(u => { if (!existing.has(u.username)) { STATE.followers.push(u); existing.add(u.username); }});
+        loadLog["extra:" + base] = zipPath;
+      }
+    }
+    onLoaded(file.name, found);
+  } catch(e) {
+    toast("Error reading ZIP: " + e.message);
+    updateDZ("❌", "Error reading file", e.message, false);
+  }
+}
+
+function handleJsonFiles(files) {
+  let found = 0;
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const key = filenameToKey(file.name);
+      if (key) {
+        STATE[key] = parseUsers(e.target.result);
+        loadLog[key] = file.name;
+        found++;
+      }
+      if (found > 0) onLoaded("selected files", found);
+      updatePills(); runAnalysis(); refreshTable();
+    };
+    reader.readAsText(file);
+  });
+}
+
+function onLoaded(name, found) {
+  updatePills();
+  runAnalysis();
+  refreshTable();
+  const total = Object.values(STATE).reduce((s,a)=>s+a.length,0);
+  updateDZ("✅", `Loaded: ${name}`, `${STATE.followers.length} followers · ${STATE.following.length} following · ${found} files found`, true);
+}
+
+function updateDZ(icon, title, sub, loaded) {
+  document.getElementById("dz-icon").textContent  = icon;
+  document.getElementById("dz-title").textContent = title;
+  document.getElementById("dz-sub").textContent   = sub;
+  document.getElementById("drop-zone").classList.toggle("loaded", loaded);
+}
+
+function updatePills() {
+  Object.entries(FILE_LABELS).forEach(([key, [label, color]]) => {
+    const p = document.getElementById("pill-" + key);
+    if (!p) return;
+    const arr = STATE[key] || [];
+    if (arr.length) {
+      p.textContent = `✅ ${label} (${arr.length})`;
+      p.style.color = color;
+      p.classList.add("loaded");
+    } else {
+      p.textContent = `○ ${label}`;
+      p.style.color = "";
+      p.classList.remove("loaded");
+    }
+  });
+}
+
+// ═══════════════════════ ANALYSIS ════════════════════════════════════════════
+function runAnalysis() {
+  const frs  = new Set(STATE.followers.map(u=>u.username));
+  const fing = new Set(STATE.following.map(u=>u.username));
+  const now  = Date.now() / 1000;
+  const cutoff = now - 180 * 86400;
+
+  const nfb    = [...fing].filter(u => !frs.has(u)).length;
+  const fans   = [...frs].filter(u => !fing.has(u)).length;
+  const mutual = [...frs].filter(u => fing.has(u)).length;
+  const ghost  = STATE.followers.filter(u => (u.timestamp || now) < cutoff).length;
+  const ratio  = fing.size ? (frs.size / fing.size).toFixed(2) : "—";
+
+  document.getElementById("s-followers").textContent = frs.size  || "—";
+  document.getElementById("s-following").textContent = fing.size || "—";
+  document.getElementById("s-nfb").textContent       = nfb    || "—";
+  document.getElementById("s-fans").textContent      = fans   || "—";
+  document.getElementById("s-mutual").textContent    = mutual || "—";
+  document.getElementById("s-ratio").textContent     = ratio;
+  document.getElementById("s-ghost").textContent     = ghost  || "—";
+  document.getElementById("s-pending").textContent   = STATE.pending_requests.length || "—";
+}
+
+// ═══════════════════════ TABLE ════════════════════════════════════════════════
+function getCurrentData() {
+  const frs  = new Set(STATE.followers.map(u=>u.username));
+  const fing = new Set(STATE.following.map(u=>u.username));
+  const now  = Date.now() / 1000;
+  const cutoff = now - 180 * 86400;
+
+  switch(currentTab) {
+    case "not_following_back":  return STATE.following.filter(u => !frs.has(u.username));
+    case "fans":                return STATE.followers.filter(u => !fing.has(u.username));
+    case "mutual":              return STATE.followers.filter(u => fing.has(u.username));
+    case "ghost_followers":     return STATE.followers.filter(u => (u.timestamp||now) < cutoff);
+    case "story_hiders":        return [...STATE.hide_story];
+    case "recently_unfollowed": return [...STATE.unfollowed];
+    case "pending_requests":    return [...STATE.pending_requests];
+    case "recent_requests":     return [...STATE.recent_requests];
+    case "removed_suggestions": return [...STATE.removed_suggestions];
+    case "all_followers":       return [...STATE.followers];
+    case "all_following":       return [...STATE.following];
+    default: return [];
+  }
+}
+
+function fmtTs(ts) {
+  if (!ts) return "—";
+  try { return new Date(ts * 1000).toISOString().slice(0,10); }
+  catch(e) { return "—"; }
+}
+function daysAgo(ts) {
+  if (!ts) return "—";
+  return Math.floor((Date.now()/1000 - ts) / 86400);
+}
+function cleanUrl(username) {
+  const u = username.replace(/^@/, "").trim();
+  return u ? `https://www.instagram.com/${u}` : "#";
+}
+
+function refreshTable() {
+  let data  = getCurrentData();
+  const q   = document.getElementById("search").value.trim().toLowerCase();
+  if (q) data = data.filter(u => u.username.toLowerCase().includes(q));
+
+  if (sortCol && sortCol !== "#") {
+    data = [...data].sort((a,b) => {
+      let va, vb;
+      if      (sortCol === "Username")  { va = a.username; vb = b.username; }
+      else if (sortCol === "Date")      { va = a.timestamp||0; vb = b.timestamp||0; return sortReverse ? va-vb : vb-va; }
+      else if (sortCol === "Days Ago")  { va = a.timestamp||0; vb = b.timestamp||0; return sortReverse ? vb-va : va-vb; }
+      else { va = a.username; vb = b.username; }
+      return sortReverse ? vb.localeCompare(va) : va.localeCompare(vb);
+    });
+  }
+
+  const tbody = document.getElementById("table-body");
+  const empty = document.getElementById("empty-state");
+
+  if (!data.length) {
+    tbody.innerHTML = "";
+    empty.style.display = "block";
+    document.getElementById("count-lbl").textContent = "";
+    return;
+  }
+  empty.style.display = "none";
+  document.getElementById("count-lbl").textContent = `${data.length} users`;
+
+  tbody.innerHTML = data.map((u, i) => {
+    const uname = u.username || "—";
+    const url   = cleanUrl(uname);
+    const date  = fmtTs(u.timestamp);
+    const days  = daysAgo(u.timestamp);
+    return `<tr ondblclick="window.open('${url}','_blank')">
+      <td class="num">${i+1}</td>
+      <td class="username">@${uname}</td>
+      <td class="link"><a href="${url}" target="_blank" rel="noopener">${url}</a></td>
+      <td class="date">${date}</td>
+      <td class="days">${days}</td>
+    </tr>`;
+  }).join("");
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortReverse = !sortReverse;
+  else { sortCol = col; sortReverse = false; }
+  document.querySelectorAll(".sort-arrow").forEach(el => el.textContent = "");
+  const arrow = document.getElementById("sa-" + col);
+  if (arrow) arrow.textContent = sortReverse ? " ↑" : " ↓";
+  refreshTable();
+}
+
+// ═══════════════════════ ACTIONS ══════════════════════════════════════════════
+function exportCSV() {
+  const data = getCurrentData();
+  if (!data.length) { toast("No data to export."); return; }
+  const rows = [["Username","Profile Link","Date","Days Ago"],
+    ...data.map(u => [u.username, cleanUrl(u.username), fmtTs(u.timestamp), daysAgo(u.timestamp)])];
+  const csv = rows.map(r => r.map(v=>`"${v}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `instascope_${currentTab}.csv`;
+  a.click();
+  toast(`Exported ${data.length} rows`);
+}
+
+function copyAll() {
+  const data = getCurrentData();
+  if (!data.length) { toast("No data to copy."); return; }
+  navigator.clipboard.writeText(data.map(u=>u.username).join("\n")).then(() => {
+    toast(`Copied ${data.length} usernames`);
+  }).catch(() => toast("Copy failed — try a different browser"));
+}
+
+function showLog() {
+  const modal = document.getElementById("log-modal");
+  const pre   = document.getElementById("log-content");
+  if (!Object.keys(loadLog).length) {
+    pre.textContent = "No export loaded yet.";
+  } else {
+    let txt = "";
+    Object.entries(loadLog).forEach(([key, path]) => {
+      const arr = STATE[key] || [];
+      const count = Array.isArray(arr) ? arr.length : "?";
+      txt += `✅  ${key.padEnd(28)} →  ${String(count).padStart(4)} entries\n     ${path}\n\n`;
+    });
+    const notFound = Object.keys(FILE_NAMES).filter(k => !loadLog[k]);
+    if (notFound.length) {
+      txt += "── Not found in export ──\n";
+      notFound.forEach(k => { txt += `○  ${k}\n`; });
+    }
+    pre.textContent = txt;
+  }
+  modal.classList.add("open");
+}
+
+// ═══════════════════════ CHARTS ═══════════════════════════════════════════════
+let chartsOpen = false;
+function toggleCharts() {
+  chartsOpen = !chartsOpen;
+  document.getElementById("chart-section").classList.toggle("open", chartsOpen);
+  if (chartsOpen) renderCharts();
+}
+
+function renderCharts() {
+  const frs  = new Set(STATE.followers.map(u=>u.username));
+  const fing = new Set(STATE.following.map(u=>u.username));
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  const canvas = document.getElementById("chart-canvas");
+  const ctx    = canvas.getContext("2d");
+
+  const nfb  = [...fing].filter(u=>!frs.has(u)).length;
+  const fans = [...frs].filter(u=>!fing.has(u)).length;
+  const mut  = [...frs].filter(u=>fing.has(u)).length;
+
+  if (!nfb && !fans && !mut) { return; }
+
+  chartInstance = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Not Following Back", "Your Fans", "Mutual"],
+      datasets: [{
+        data: [nfb, fans, mut],
+        backgroundColor: ["#f85149", "#3fb950", "#d29922"],
+        borderColor: "#161b22", borderWidth: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: "#f0f6fc", font: { size: 13 } } },
+        title: { display: true, text: "Account Relationship Overview",
+                 color: "#f0f6fc", font: { size: 15 } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════ DRAG & DROP ══════════════════════════════════════════
+function setupDragDrop() {
+  const dz = document.getElementById("drop-zone");
+  dz.addEventListener("dragover",  e => { e.preventDefault(); dz.classList.add("drag-over"); });
+  dz.addEventListener("dragleave", e => dz.classList.remove("drag-over"));
+  dz.addEventListener("drop", e => {
+    e.preventDefault();
+    dz.classList.remove("drag-over");
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (file.name.endsWith(".zip")) handleZipFile(file);
+    else toast("Please drop a .zip file.");
+  });
+}
+
+// ═══════════════════════ TOAST ════════════════════════════════════════════════
+let _toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
