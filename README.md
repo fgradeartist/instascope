@@ -1,9 +1,4 @@
 # 📸 InstaScope
-## 🚀 Try It Instantly (No Download)
-
-👉 https://fgradeartist.github.io/instascope/
-
-Just open and drop your Instagram ZIP file.
 > **Instagram Account Analyzer** — 100% offline. No API key. No login. Just drop your Instagram ZIP.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
@@ -13,7 +8,11 @@ Just open and drop your Instagram ZIP file.
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline-brightgreen)
 
 ---
+## 🚀 Try It Instantly (No Download)
 
+👉 https://fgradeartist.github.io/instascope/
+
+Just open and drop your Instagram ZIP file.
 ## 🌐 Use in Browser (No Install Needed)
 
 **Just download [`instascope.html`](instascope.html) and open it in Chrome/Firefox/Edge.**
