@@ -3,682 +3,1156 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>InstaScope — Instagram Account Analyzer</title>
+<title>InstaScope v1.2 — Instagram Account Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0d1117; --card: #161b22; --border: #30363d;
-    --accent: #e1306c; --accent2: #833ab4; --text: #f0f6fc;
-    --sub: #8b949e; --green: #3fb950; --yellow: #d29922;
-    --red: #f85149; --blue: #58a6ff; --white: #ffffff;
-    --teal: #39d353;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+:root {
+  --bg:#080c10; --surface:#0e1318; --card:#131920; --card2:#19222c;
+  --border:#1f2d3d; --border2:#243447;
+  --accent:#e1306c; --accent-glow:rgba(225,48,108,.25);
+  --purple:#a855f7; --blue:#3b82f6; --teal:#14b8a6;
+  --green:#22c55e; --yellow:#eab308; --orange:#f97316; --red:#ef4444;
+  --text:#eef2f7; --sub:#6b7f96; --sub2:#3d5166;
+  --mono:'Space Mono', monospace;
+  --sans:'Outfit', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:14px}
 
-  /* Header */
-  .header { background: var(--card); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
-  .header-left { display: flex; align-items: baseline; gap: 12px; }
-  .header h1 { font-size: 20px; font-weight: 700; }
-  .header .ver { font-size: 12px; color: var(--sub); }
-  .header .tagline { font-size: 12px; color: var(--sub); }
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 
-  /* Drop zone */
-  .drop-section { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; }
-  .drop-zone {
-    border: 2px dashed var(--green); border-radius: 10px;
-    padding: 28px 20px; text-align: center; cursor: pointer;
-    transition: all .2s; background: rgba(63,185,80,.04);
-    position: relative;
-  }
-  .drop-zone:hover, .drop-zone.drag-over { background: rgba(63,185,80,.10); border-color: #58e06a; }
-  .drop-zone.loaded { border-color: var(--green); background: rgba(63,185,80,.07); }
-  .drop-zone.loaded .dz-icon { font-size: 32px; }
-  .dz-icon { font-size: 36px; margin-bottom: 10px; }
-  .dz-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-  .dz-sub { font-size: 12px; color: var(--sub); margin-bottom: 14px; }
-  .dz-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  #file-input { display: none; }
+/* ── HEADER ── */
+.header{
+  background:linear-gradient(180deg, rgba(14,19,24,1) 0%, rgba(8,12,16,.98) 100%);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:58px; position:sticky;top:0;z-index:200;
+  backdrop-filter:blur(12px);
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{font-size:22px;filter:drop-shadow(0 0 10px var(--accent))}
+.logo-text{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.5px}
+.logo-ver{font-size:10px;font-weight:700;padding:2px 7px;background:var(--accent);color:#fff;border-radius:20px;margin-left:4px;letter-spacing:.5px}
+.header-right{display:flex;align-items:center;gap:8px}
+.hdr-stat{font-family:var(--mono);font-size:11px;color:var(--sub);padding:4px 10px;border:1px solid var(--border);border-radius:20px}
+.hdr-stat span{color:var(--green)}
+.last-calc{font-size:10px;color:var(--sub2);font-family:var(--mono)}
 
-  /* Buttons */
-  .btn { padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: opacity .15s; }
-  .btn:hover { opacity: .85; }
-  .btn-green  { background: var(--green);   color: #0d1117; }
-  .btn-accent { background: var(--accent);  color: white; }
-  .btn-blue   { background: var(--blue);    color: #0d1117; }
-  .btn-dark   { background: #21262d;        color: var(--text); }
-  .btn-red    { background: var(--red);     color: white; }
+/* ── MAIN LAYOUT ── */
+.main{max-width:1400px;margin:0 auto;padding:0 28px 40px}
 
-  /* Pills */
-  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-  .pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; background: #21262d; color: var(--sub); white-space: nowrap; }
-  .pill.loaded { color: var(--text); }
+/* ── DROP ZONE ── */
+.drop-section{padding:20px 0 0}
+.drop-zone{
+  border:1.5px dashed var(--border2);border-radius:16px;
+  padding:28px 24px;text-align:center;cursor:pointer;
+  transition:all .25s;background:rgba(225,48,108,.02);
+  position:relative;overflow:hidden;
+}
+.drop-zone::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%, rgba(225,48,108,.06) 0%, transparent 60%);
+  pointer-events:none;
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--accent);background:rgba(225,48,108,.04);
+  box-shadow:0 0 40px rgba(225,48,108,.08);
+}
+.drop-zone.loaded{border-color:var(--green);border-style:solid;background:rgba(34,197,94,.03)}
+.dz-icon{font-size:32px;margin-bottom:8px;display:block}
+.dz-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.dz-sub{font-size:12px;color:var(--sub);margin-bottom:16px}
+.dz-detected{font-size:11px;color:var(--teal);font-family:var(--mono);margin-top:8px;padding:6px 12px;background:rgba(20,184,166,.08);border-radius:8px;display:inline-block}
+.dz-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+input[type=file]{display:none}
 
-  /* Stats */
-  .stats-row { display: flex; gap: 10px; padding: 12px 24px; flex-wrap: wrap; overflow-x: auto; }
-  .stat-card { background: var(--card); border-radius: 8px; padding: 12px 16px; min-width: 120px; }
-  .stat-val { font-size: 26px; font-weight: 700; }
-  .stat-lbl { font-size: 11px; color: var(--sub); margin-top: 2px; }
+/* ── BUTTONS ── */
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;transition:all .18s;letter-spacing:.2px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(.97)}
+.btn-accent{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(225,48,108,.3)}
+.btn-accent:hover{box-shadow:0 6px 20px rgba(225,48,108,.45)}
+.btn-green{background:var(--green);color:#000;box-shadow:0 4px 14px rgba(34,197,94,.25)}
+.btn-dark{background:var(--card2);color:var(--text);border:1px solid var(--border2)}
+.btn-dark:hover{border-color:var(--sub)}
+.btn-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
 
-  /* Tabs */
-  .tab-bar { display: flex; padding: 6px 24px 0; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--border); }
-  .tab-bar::-webkit-scrollbar { height: 3px; }
-  .tab-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  .tab { padding: 8px 14px; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 12px; color: var(--sub); white-space: nowrap; background: transparent; border: none; }
-  .tab:hover { color: var(--text); background: #1c2128; }
-  .tab.active { background: var(--accent); color: white; }
+/* ── FILE PILLS ── */
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.pill{padding:4px 11px;border-radius:20px;font-size:11px;font-family:var(--mono);background:var(--card2);color:var(--sub);border:1px solid var(--border);white-space:nowrap;transition:all .2s}
+.pill.ok{border-color:rgba(34,197,94,.3);color:var(--green);background:rgba(34,197,94,.08)}
+.pill.warn{border-color:rgba(234,179,8,.3);color:var(--yellow)}
 
-  /* Toolbar */
-  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 24px; }
-  .search-wrap { position: relative; flex: 1; max-width: 420px; }
-  .search-wrap input { width: 100%; padding: 7px 12px 7px 34px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; outline: none; }
-  .search-wrap input:focus { border-color: var(--accent); }
-  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--sub); }
-  .count-lbl { font-size: 12px; color: var(--sub); margin-left: auto; }
+/* ── DATE RANGE PANEL ── */
+.range-panel{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px 20px;margin-top:14px;display:none;
+}
+.range-panel.visible{display:block}
+.range-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.range-title{font-size:13px;font-weight:700;color:var(--text)}
+.range-detected{font-size:11px;color:var(--teal);font-family:var(--mono)}
+.range-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.range-label{font-size:11px;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.date-input{
+  padding:7px 12px;background:var(--card2);border:1px solid var(--border2);
+  border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;
+  outline:none;cursor:pointer;
+}
+.date-input:focus{border-color:var(--accent)}
+.date-input::-webkit-calendar-picker-indicator{filter:invert(.5);cursor:pointer}
+.range-dash{color:var(--sub);font-size:13px}
+.range-badge{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.2);font-family:var(--mono)}
+.range-badge.warning{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.2)}
 
-  /* Table */
-  .table-wrap { overflow: auto; padding: 0 24px 20px; }
-  table { width: 100%; border-collapse: collapse; }
-  thead th { text-align: left; padding: 8px 10px; font-size: 11px; color: var(--sub); font-weight: 600; background: #1c2128; cursor: pointer; user-select: none; white-space: nowrap; }
-  thead th:hover { color: var(--text); }
-  thead th .sort-arrow { opacity: .5; margin-left: 4px; }
-  tbody tr:nth-child(even) { background: #1c2128; }
-  tbody tr:nth-child(odd)  { background: var(--card); }
-  tbody tr:hover { background: #1f2937; }
-  tbody td { padding: 7px 10px; font-size: 13px; vertical-align: middle; }
-  tbody td.num { color: var(--sub); font-size: 11px; width: 40px; }
-  tbody td.username { font-weight: 600; }
-  tbody td.link a { color: var(--blue); text-decoration: none; font-size: 12px; }
-  tbody td.link a:hover { text-decoration: underline; }
-  tbody td.date { color: var(--sub); font-size: 11px; white-space: nowrap; }
-  tbody td.days { color: var(--sub); font-size: 11px; }
+/* ── THRESHOLD PANEL ── */
+.threshold-panel{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:14px 20px;margin-top:10px;display:none;
+}
+.threshold-panel.visible{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.thr-group{display:flex;align-items:center;gap:8px}
+.thr-label{font-size:11px;color:var(--sub);font-weight:600}
+.thr-input{width:52px;padding:5px 8px;background:var(--card2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;text-align:center;outline:none}
+.thr-input:focus{border-color:var(--accent)}
+.thr-unit{font-size:11px;color:var(--sub2)}
+.settings-toggle{font-size:11px;color:var(--sub);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;user-select:none;padding:0 8px}
+.settings-toggle:hover{color:var(--text)}
 
-  /* Empty state */
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--sub); }
-  .empty-state .icon { font-size: 48px; margin-bottom: 14px; }
-  .empty-state p { font-size: 14px; }
+/* ── ATTENTION BANNER ── */
+.attention-bar{
+  display:none;background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(234,179,8,.08));
+  border:1px solid rgba(239,68,68,.2);border-radius:12px;
+  padding:12px 18px;margin-top:12px;
+  flex-wrap:wrap;gap:10px;align-items:center;
+}
+.attention-bar.visible{display:flex}
+.attention-items{display:flex;gap:10px;flex-wrap:wrap;flex:1}
+.attn-chip{font-size:11px;font-family:var(--mono);padding:4px 10px;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.attn-chip:hover{transform:scale(1.04)}
+.attn-chip.red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.attn-chip.yellow{background:rgba(234,179,8,.12);color:var(--yellow);border:1px solid rgba(234,179,8,.25)}
+.attn-chip.orange{background:rgba(249,115,22,.12);color:var(--orange);border:1px solid rgba(249,115,22,.25)}
 
-  /* Footer */
-  .footer { background: var(--card); border-top: 1px solid var(--border); padding: 10px 24px; font-size: 11px; color: var(--sub); text-align: center; }
+/* ── STATS GRID ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:18px}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s;
+}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
+.stat-card:hover{border-color:var(--border2)}
+.stat-val{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1}
+.stat-lbl{font-size:10px;color:var(--sub);margin-top:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 
-  /* Toast */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: #1f6feb; color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; }
-  .toast.show { opacity: 1; }
+/* ── TAB BAR ── */
+.tab-wrap{overflow-x:auto;scrollbar-width:none;margin-top:18px;border-bottom:1px solid var(--border)}
+.tab-wrap::-webkit-scrollbar{display:none}
+.tab-bar{display:flex;gap:0;min-width:max-content}
+.tab{
+  padding:10px 16px;font-size:12px;font-weight:600;color:var(--sub);
+  cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;
+  transition:all .18s;background:none;border-top:none;border-left:none;border-right:none;
+  font-family:var(--sans);letter-spacing:.1px;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab .tab-count{
+  display:inline-block;margin-left:5px;padding:1px 6px;
+  border-radius:20px;font-size:10px;font-family:var(--mono);
+  background:var(--card2);color:var(--sub);
+}
+.tab.active .tab-count{background:rgba(225,48,108,.2);color:var(--accent)}
 
-  /* Modal */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 1000; align-items: center; justify-content: center; }
-  .modal-overlay.open { display: flex; }
-  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 700px; width: 94%; max-height: 85vh; overflow-y: auto; }
-  .modal h2 { margin-bottom: 14px; font-size: 16px; }
-  .modal pre { background: var(--bg); padding: 14px; border-radius: 8px; font-size: 12px; color: var(--sub); overflow-x: auto; white-space: pre-wrap; line-height: 1.7; }
-  .modal-close { float: right; background: none; border: none; color: var(--sub); font-size: 20px; cursor: pointer; margin-top: -4px; }
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:10px;padding:12px 0 8px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:180px;max-width:360px}
+.search-wrap input{
+  width:100%;padding:8px 12px 8px 34px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;
+}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--sub);font-size:14px;pointer-events:none}
+.count-badge{font-family:var(--mono);font-size:11px;color:var(--sub);padding:4px 10px;background:var(--card);border:1px solid var(--border);border-radius:20px;white-space:nowrap}
+.filter-active-badge{font-size:11px;padding:4px 10px;background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2);border-radius:20px;font-family:var(--mono)}
 
-  /* Chart panel */
-  .chart-section { display: none; padding: 16px 24px; }
-  .chart-section.open { display: block; }
-  .chart-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
-  canvas { max-width: 100%; }
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);background:var(--card);margin-top:4px}
+table{width:100%;border-collapse:collapse;min-width:640px}
+thead th{
+  padding:10px 14px;font-size:10px;font-weight:700;color:var(--sub);
+  background:#111820;text-align:left;cursor:pointer;
+  user-select:none;white-space:nowrap;letter-spacing:.5px;text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+}
+thead th:hover{color:var(--text)}
+thead th .sa{opacity:.4;margin-left:4px}
+tbody tr{border-bottom:1px solid rgba(31,45,61,.5);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.025)}
+tbody td{padding:9px 14px;vertical-align:middle;font-size:13px}
+td.idx{color:var(--sub2);font-family:var(--mono);font-size:11px;width:36px}
+td.uname{font-weight:600;font-size:13px;cursor:pointer}
+td.uname:hover{color:var(--accent)}
+td.uname .at{color:var(--sub);font-weight:400}
+td.link-cell a{color:var(--blue);text-decoration:none;font-size:12px;font-family:var(--mono)}
+td.link-cell a:hover{text-decoration:underline}
+td.date-cell{font-family:var(--mono);font-size:11px;color:var(--sub)}
+td.days-cell{font-family:var(--mono);font-size:11px}
+td.status-cell{white-space:nowrap}
 
-  @media (max-width: 700px) {
-    .stats-row { gap: 6px; padding: 10px 12px; }
-    .stat-card { min-width: 90px; padding: 8px 10px; }
-    .stat-val { font-size: 20px; }
-    .toolbar, .table-wrap { padding-left: 12px; padding-right: 12px; }
-    .tab-bar { padding: 6px 12px 0; }
-    .drop-section { padding: 12px; }
-  }
+/* ── STATUS BADGES ── */
+.sbadge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;
+  font-family:var(--mono);white-space:nowrap;letter-spacing:.2px;
+}
+.sbadge.fresh   {background:rgba(34,197,94,.12); color:var(--green);  border:1px solid rgba(34,197,94,.2)}
+.sbadge.recent  {background:rgba(234,179,8,.1);  color:var(--yellow); border:1px solid rgba(234,179,8,.2)}
+.sbadge.aging   {background:rgba(249,115,22,.1); color:var(--orange); border:1px solid rgba(249,115,22,.2)}
+.sbadge.expired {background:rgba(239,68,68,.12); color:var(--red);    border:1px solid rgba(239,68,68,.25)}
+.sbadge.mutual  {background:rgba(20,184,166,.1); color:var(--teal);   border:1px solid rgba(20,184,166,.2)}
+.sbadge.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:70px 20px;color:var(--sub)}
+.empty-icon{font-size:44px;margin-bottom:12px;opacity:.5}
+.empty p{font-size:14px;margin-bottom:6px}
+.empty small{font-size:11px;color:var(--sub2)}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:28px;right:28px;
+  background:var(--card2);border:1px solid var(--border2);
+  color:var(--text);padding:11px 18px;border-radius:10px;
+  font-size:13px;font-weight:500;z-index:9999;
+  opacity:0;transition:all .28s;pointer-events:none;
+  box-shadow:0 8px 30px rgba(0,0,0,.4);transform:translateY(8px);
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;max-width:680px;width:100%;max-height:85vh;overflow-y:auto}
+.modal-box h3{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.modal-box h3 button{background:none;border:none;color:var(--sub);font-size:18px;cursor:pointer;padding:0 4px}
+.modal-box h3 button:hover{color:var(--text)}
+.log-pre{background:var(--bg);padding:16px;border-radius:10px;font-family:var(--mono);font-size:11px;color:var(--sub);white-space:pre-wrap;line-height:1.8;overflow-x:auto}
+
+/* ── CHART SECTION ── */
+.chart-wrap{display:none;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-top:14px}
+.chart-wrap.open{display:block}
+canvas{max-width:100%;border-radius:8px}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.chart-row{grid-template-columns:1fr}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:800px){
+  .main{padding:0 14px 30px}
+  .header{padding:0 14px}
+  .stats-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px}
+  .toolbar{gap:7px}
+}
 </style>
 </head>
 <body>
 
-<!-- Header -->
-<div class="header">
-  <div class="header-left">
-    <h1>📸 InstaScope</h1>
-    <span class="ver">v2.0</span>
-    <span class="tagline">Instagram Account Analyzer</span>
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <span class="logo-icon">📸</span>
+    <span class="logo-text">InstaScope</span>
+    <span class="logo-ver">v1.2</span>
   </div>
-  <span style="font-size:11px;color:var(--sub)">100% offline · runs in your browser · no login needed</span>
-</div>
+  <div class="header-right">
+    <div class="hdr-stat">followers <span id="h-fr">—</span> · following <span id="h-fg">—</span></div>
+    <div class="last-calc" id="last-calc"></div>
+  </div>
+</header>
 
-<!-- Drop Zone -->
-<div class="drop-section">
-  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-    <div class="dz-icon" id="dz-icon">📂</div>
-    <div class="dz-title" id="dz-title">Drop your Instagram ZIP here</div>
-    <div class="dz-sub" id="dz-sub">or click to select a ZIP file</div>
-    <div class="dz-btns" onclick="event.stopPropagation()">
-      <button class="btn btn-green" onclick="document.getElementById('file-input').click()">📦 Select ZIP</button>
-      <button class="btn btn-blue"  onclick="document.getElementById('folder-input').click()">📁 Select Files</button>
-      <button class="btn btn-dark"  onclick="toggleCharts()">📊 Charts</button>
-      <button class="btn btn-dark"  onclick="exportCSV()">💾 Export CSV</button>
-      <button class="btn btn-dark"  onclick="copyAll()">📋 Copy All</button>
-      <button class="btn btn-dark"  onclick="showLog()">🗂 Load Log</button>
+<div class="main">
+
+  <!-- DROP ZONE -->
+  <div class="drop-section">
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('zip-input').click()">
+      <span class="dz-icon" id="dz-icon">📂</span>
+      <div class="dz-title" id="dz-title">Drop your Instagram ZIP here</div>
+      <div class="dz-sub" id="dz-sub">or click to browse · supports .zip export from Meta</div>
+      <div class="dz-btns" onclick="event.stopPropagation()">
+        <button class="btn btn-accent" onclick="document.getElementById('zip-input').click()">📦 Select ZIP</button>
+        <button class="btn btn-dark" onclick="document.getElementById('json-input').click()">📁 Select JSON Files</button>
+        <button class="btn btn-dark" onclick="toggleCharts()">📊 Charts</button>
+        <button class="btn btn-dark" onclick="exportCSV()">💾 Export CSV</button>
+        <button class="btn btn-dark" onclick="copyAll()">📋 Copy All</button>
+        <button class="btn btn-dark" onclick="showLog()">🗂 Load Log</button>
+        <span class="settings-toggle" onclick="toggleSettings()">⚙ Settings</span>
+      </div>
+      <div class="dz-detected" id="dz-detected" style="display:none"></div>
     </div>
-    <input type="file" id="file-input" accept=".zip" onchange="handleZipFile(this.files[0])">
-    <input type="file" id="folder-input" accept=".json" multiple onchange="handleJsonFiles(this.files)">
+    <input type="file" id="zip-input" accept=".zip" onchange="handleZip(this.files[0])">
+    <input type="file" id="json-input" accept=".json" multiple onchange="handleJsonFiles(this.files)">
+
+    <!-- FILE PILLS -->
+    <div class="pills" id="pills"></div>
+
+    <!-- DATE RANGE PANEL -->
+    <div class="range-panel" id="range-panel">
+      <div class="range-header">
+        <div>
+          <div class="range-title">📅 Date Range Filter</div>
+          <div class="range-detected" id="range-detected"></div>
+        </div>
+        <div class="range-controls">
+          <span class="range-label">From</span>
+          <input type="date" class="date-input" id="date-from" onchange="applyFilters()">
+          <span class="range-dash">→</span>
+          <span class="range-label">To</span>
+          <input type="date" class="date-input" id="date-to" onchange="applyFilters()">
+          <button class="btn btn-dark" onclick="resetDateRange()" style="font-size:11px;padding:6px 11px">Reset</button>
+          <span class="range-badge" id="range-badge"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- THRESHOLD SETTINGS -->
+    <div class="threshold-panel" id="thr-panel">
+      <div class="thr-group">
+        <span class="thr-label">🟡 Flag non-mutual after</span>
+        <input type="number" class="thr-input" id="thr-nfb" value="7" min="1" max="365" onchange="saveThr();applyFilters()">
+        <span class="thr-unit">days</span>
+      </div>
+      <div class="thr-group">
+        <span class="thr-label">🔴 Flag pending as expired after</span>
+        <input type="number" class="thr-input" id="thr-pending" value="15" min="1" max="365" onchange="saveThr();applyFilters()">
+        <span class="thr-unit">days</span>
+      </div>
+      <div class="thr-group">
+        <span class="thr-label">👻 Ghost follower threshold</span>
+        <input type="number" class="thr-input" id="thr-ghost" value="180" min="30" max="730" onchange="saveThr();applyFilters()">
+        <span class="thr-unit">days</span>
+      </div>
+      <span style="font-size:10px;color:var(--sub2);font-family:var(--mono)">saved to browser</span>
+    </div>
+
+    <!-- ATTENTION BANNER -->
+    <div class="attention-bar" id="attn-bar">
+      <span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">⚠ Needs Attention</span>
+      <div class="attention-items" id="attn-items"></div>
+    </div>
   </div>
-  <div class="pills" id="pills"></div>
-</div>
 
-<!-- Stats -->
-<div class="stats-row" id="stats-row">
-  <div class="stat-card"><div class="stat-val" id="s-followers" style="color:var(--accent2)">—</div><div class="stat-lbl">Followers</div></div>
-  <div class="stat-card"><div class="stat-val" id="s-following" style="color:var(--accent)">—</div><div class="stat-lbl">Following</div></div>
-  <div class="stat-card"><div class="stat-val" id="s-nfb"       style="color:var(--red)">—</div><div class="stat-lbl">Not Following Back</div></div>
-  <div class="stat-card"><div class="stat-val" id="s-fans"      style="color:var(--green)">—</div><div class="stat-lbl">Your Fans</div></div>
-  <div class="stat-card"><div class="stat-val" id="s-mutual"    style="color:var(--yellow)">—</div><div class="stat-lbl">Mutual</div></div>
-  <div class="stat-card"><div class="stat-val" id="s-ratio"     style="color:var(--blue)">—</div><div class="stat-lbl">Follow-back Ratio</div></div>
-  <div class="stat-card"><div class="stat-val" id="s-ghost"     style="color:var(--sub)">—</div><div class="stat-lbl">Ghost Followers</div></div>
-  <div class="stat-card"><div class="stat-val" id="s-pending"   style="color:var(--accent2)">—</div><div class="stat-lbl">Pending Sent</div></div>
-</div>
+  <!-- STATS GRID -->
+  <div class="stats-grid" id="stats-grid"></div>
 
-<!-- Tabs -->
-<div class="tab-bar" id="tab-bar"></div>
+  <!-- TABS -->
+  <div class="tab-wrap"><div class="tab-bar" id="tab-bar"></div></div>
 
-<!-- Toolbar -->
-<div class="toolbar">
-  <div class="search-wrap">
-    <span class="search-icon">🔎</span>
-    <input type="text" id="search" placeholder="Search username…" oninput="refreshTable()">
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-ico">🔎</span>
+      <input type="text" id="search" placeholder="Search username…" oninput="renderTable()">
+    </div>
+    <div class="count-badge" id="count-badge">0 users</div>
+    <div class="filter-active-badge" id="filter-badge" style="display:none">📅 Date filter active</div>
+    <button class="btn btn-dark" onclick="switchTab('needs_attention')" style="font-size:11px">⚠ Needs Attention</button>
   </div>
-  <span class="count-lbl" id="count-lbl"></span>
-</div>
 
-<!-- Table -->
-<div class="table-wrap">
-  <table id="main-table">
-    <thead>
-      <tr>
-        <th onclick="sortBy('#')">#<span class="sort-arrow" id="sa-#"></span></th>
-        <th onclick="sortBy('Username')">Username<span class="sort-arrow" id="sa-Username"></span></th>
-        <th onclick="sortBy('Profile Link')">Profile Link<span class="sort-arrow" id="sa-Profile Link"></span></th>
-        <th onclick="sortBy('Date')">Date<span class="sort-arrow" id="sa-Date"></span></th>
-        <th onclick="sortBy('Days Ago')">Days Ago<span class="sort-arrow" id="sa-Days Ago"></span></th>
-      </tr>
-    </thead>
-    <tbody id="table-body"></tbody>
-  </table>
-  <div class="empty-state" id="empty-state">
-    <div class="icon">📂</div>
-    <p>Upload your Instagram data export to get started.</p>
-    <p style="margin-top:8px;font-size:12px">Settings → Account → Download Your Data → JSON format</p>
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table id="main-table">
+      <thead>
+        <tr>
+          <th onclick="sortBy('#')"># <span class="sa" id="sa-#"></span></th>
+          <th onclick="sortBy('username')">Username <span class="sa" id="sa-username"></span></th>
+          <th onclick="sortBy('link')">Profile Link <span class="sa" id="sa-link"></span></th>
+          <th onclick="sortBy('date')">Followed On <span class="sa" id="sa-date"></span></th>
+          <th onclick="sortBy('days')">Days Ago <span class="sa" id="sa-days"></span></th>
+          <th onclick="sortBy('status')">Status <span class="sa" id="sa-status"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty-state">
+      <div class="empty-icon">📂</div>
+      <p>Drop your Instagram export ZIP to get started</p>
+      <small>Settings → Account Center → Download Your Information → JSON format</small>
+    </div>
   </div>
-</div>
 
-<!-- Charts section -->
-<div class="chart-section" id="chart-section">
-  <div class="chart-tabs" id="chart-tabs"></div>
-  <canvas id="chart-canvas" height="320"></canvas>
-</div>
+  <!-- CHARTS -->
+  <div class="chart-wrap" id="chart-wrap">
+    <div class="chart-row">
+      <div><canvas id="chart-overview" height="260"></canvas></div>
+      <div><canvas id="chart-bar" height="260"></canvas></div>
+    </div>
+  </div>
 
-<!-- Footer -->
-<div class="footer">
-  Double-click username → open Instagram profile &nbsp;•&nbsp;
-  All data is processed locally in your browser &nbsp;•&nbsp;
-  Nothing is uploaded anywhere &nbsp;•&nbsp;
-  <a href="https://github.com" style="color:var(--blue)">InstaScope on GitHub</a>
-</div>
+</div><!-- /main -->
 
-<!-- Toast -->
+<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- Log Modal -->
+<!-- LOG MODAL -->
 <div class="modal-overlay" id="log-modal" onclick="this.classList.remove('open')">
-  <div class="modal" onclick="event.stopPropagation()">
-    <button class="modal-close" onclick="document.getElementById('log-modal').classList.remove('open')">×</button>
-    <h2>📋 File Load Log</h2>
-    <pre id="log-content">No export loaded yet.</pre>
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3>🗂 File Load Log <button onclick="document.getElementById('log-modal').classList.remove('open')">×</button></h3>
+    <pre class="log-pre" id="log-pre">No data loaded yet.</pre>
   </div>
 </div>
 
-<!-- JSZip CDN -->
+<!-- CDN SCRIPTS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<!-- Chart.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-
 <script>
-// ═══════════════════════ STATE ═══════════════════════════════════════════════
-const STATE = {
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════
+const S = {
   followers: [], following: [], unfollowed: [], hide_story: [],
   pending_requests: [], recent_requests: [], removed_suggestions: [],
 };
-const FILE_NAMES = {
-  followers:           "followers_1.json",
-  following:           "following.json",
-  unfollowed:          "recently_unfollowed_profiles.json",
-  hide_story:          "hide_story_from.json",
-  pending_requests:    "pending_follow_requests.json",
-  recent_requests:     "recent_follow_requests.json",
-  removed_suggestions: "removed_suggestions.json",
+const loadLog   = {};
+let currentTab  = 'not_following_back';
+let sortCol     = 'days';
+let sortRev     = false;
+let chartsOpen  = false;
+let chartInst1  = null;
+let chartInst2  = null;
+let globalMin   = null; // earliest ts in loaded data
+let globalMax   = null; // latest ts in loaded data
+
+// thresholds
+let THR = { nfb: 7, pending: 15, ghost: 180 };
+
+// ── file name map ─────────────────────────────────────────────────────
+const FILE_MAP = {
+  followers_1:                    'followers',
+  following:                      'following',
+  recently_unfollowed_profiles:   'unfollowed',
+  hide_story_from:                'hide_story',
+  pending_follow_requests:        'pending_requests',
+  recent_follow_requests:         'recent_requests',
+  removed_suggestions:            'removed_suggestions',
 };
-const FILE_LABELS = {
-  followers:           ["👥 Followers",           "var(--green)"],
-  following:           ["➡️ Following",            "var(--accent)"],
-  unfollowed:          ["🕐 Unfollowed",           "var(--yellow)"],
-  hide_story:          ["🙈 Story Hiders",         "var(--blue)"],
-  pending_requests:    ["⏳ Pending Sent",          "var(--accent2)"],
-  recent_requests:     ["📨 Recent Requests",      "var(--teal, #39d353)"],
-  removed_suggestions: ["🚫 Removed Suggestions",  "var(--sub)"],
+const FILE_META = {
+  followers:           { label:'👥 Followers',            color:'var(--green)' },
+  following:           { label:'➡️ Following',             color:'var(--accent)' },
+  unfollowed:          { label:'🕐 Unfollowed',            color:'var(--yellow)' },
+  hide_story:          { label:'🙈 Story Hiders',          color:'var(--blue)' },
+  pending_requests:    { label:'⏳ Pending Sent',           color:'var(--purple)' },
+  recent_requests:     { label:'📨 Recent Requests',       color:'var(--teal)' },
+  removed_suggestions: { label:'🚫 Removed Suggestions',   color:'var(--sub)' },
 };
-const loadLog = {};
-let currentTab  = "not_following_back";
-let sortCol     = null;
-let sortReverse = false;
-let chartInstance = null;
 
 const TABS = [
-  ["not_following_back",  "❌ Not Following Back"],
-  ["fans",                "💛 Your Fans"],
-  ["mutual",              "✅ Mutual"],
-  ["ghost_followers",     "👻 Ghost Followers"],
-  ["story_hiders",        "🙈 Story Hiders"],
-  ["recently_unfollowed", "🕐 Recently Unfollowed"],
-  ["pending_requests",    "⏳ Pending Sent"],
-  ["recent_requests",     "📨 Recent Requests"],
-  ["removed_suggestions", "🚫 Removed Suggestions"],
-  ["all_followers",       "👥 All Followers"],
-  ["all_following",       "➡️ All Following"],
+  ['not_following_back',  '❌ Not Following Back'],
+  ['fans',                '💛 Your Fans'],
+  ['mutual',              '✅ Mutual'],
+  ['needs_attention',     '⚠️ Needs Attention'],
+  ['ghost_followers',     '👻 Ghost Followers'],
+  ['story_hiders',        '🙈 Story Hiders'],
+  ['recently_unfollowed', '🕐 Recently Unfollowed'],
+  ['pending_requests',    '⏳ Pending Sent'],
+  ['recent_requests',     '📨 Recent Requests'],
+  ['removed_suggestions', '🚫 Removed Suggestions'],
+  ['all_followers',       '👥 All Followers'],
+  ['all_following',       '➡️ All Following'],
 ];
 
-// ═══════════════════════ INIT ════════════════════════════════════════════════
-function init() {
-  buildTabs();
+// ═══════════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════════
+function boot() {
+  loadThr();
   buildPills();
-  refreshTable();
+  buildTabs();
+  renderStats();
+  renderTable();
   setupDragDrop();
+  startClock();
 }
 
-function buildTabs() {
-  const bar = document.getElementById("tab-bar");
-  bar.innerHTML = "";
-  TABS.forEach(([key, label]) => {
-    const btn = document.createElement("button");
-    btn.className = "tab" + (key === currentTab ? " active" : "");
-    btn.textContent = label;
-    btn.onclick = () => switchTab(key);
-    btn.id = "tab-" + key;
-    bar.appendChild(btn);
-  });
+function startClock() {
+  function tick() {
+    document.getElementById('last-calc').textContent =
+      'Now: ' + new Date().toLocaleString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  tick(); setInterval(tick, 1000);
 }
 
-function buildPills() {
-  const c = document.getElementById("pills");
-  c.innerHTML = "";
-  Object.entries(FILE_LABELS).forEach(([key, [label, color]]) => {
-    const p = document.createElement("span");
-    p.className = "pill";
-    p.id = "pill-" + key;
-    p.textContent = "○ " + label;
-    c.appendChild(p);
-  });
-}
-
-function switchTab(key) {
-  currentTab = key;
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  const btn = document.getElementById("tab-" + key);
-  if (btn) btn.classList.add("active");
-  document.getElementById("search").value = "";
-  refreshTable();
-}
-
-// ═══════════════════════ PARSER ══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// PARSER — handles any Instagram JSON format
+// ═══════════════════════════════════════════════════════════════════════
 function parseUsers(raw) {
   let data;
-  try { data = typeof raw === "string" ? JSON.parse(raw) : raw; }
+  try { data = typeof raw === 'string' ? JSON.parse(raw) : raw; }
   catch(e) { return []; }
 
-  const entries = [];
-  function extract(node) {
-    if (Array.isArray(node)) {
-      node.forEach(extract);
-    } else if (node && typeof node === "object") {
-      const sld   = node.string_list_data || [];
-      const title = node.title || "";
-      sld.forEach(s => {
-        const href  = s.href  || "";
-        const value = (s.value || title || href.replace(/\/$/, "").split("/").pop() || "").trim();
-        const ts    = s.timestamp || 0;
-        if (value || href) entries.push({ username: value, href, timestamp: ts });
-      });
-      Object.values(node).forEach(v => {
-        if (Array.isArray(v) || (v && typeof v === "object")) extract(v);
-      });
-    }
+  const out = [];
+  function walk(node) {
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (!node || typeof node !== 'object') return;
+    const sld   = node.string_list_data || [];
+    const title = (node.title || '').trim();
+    sld.forEach(s => {
+      const href  = (s.href || '').trim();
+      const value = (s.value || title || href.replace(/\/$/, '').split('/').pop() || '').trim();
+      const ts    = s.timestamp || 0;
+      if (value || href) out.push({ username: value, href, timestamp: ts });
+    });
+    Object.values(node).forEach(v => { if (v && typeof v === 'object') walk(v); });
   }
-  extract(data);
+  walk(data);
 
-  const seen = new Set(), result = [];
-  entries.forEach(e => {
-    const key = e.username || e.href;
-    if (key && !seen.has(key)) { seen.add(key); result.push(e); }
+  const seen = new Set(), res = [];
+  out.forEach(e => {
+    const k = e.username || e.href;
+    if (k && !seen.has(k)) { seen.add(k); res.push(e); }
   });
-  return result;
+  return res;
 }
 
-function filenameToKey(filename) {
-  filename = filename.toLowerCase().replace(/\\/g, "/");
-  const base = filename.split("/").pop();
-  return Object.entries(FILE_NAMES).find(([, v]) => v === base)?.[0] || null;
+function baseName(path) {
+  return path.replace(/\\/g, '/').split('/').pop().replace('.json', '').toLowerCase();
 }
 
-// ═══════════════════════ FILE LOADING ════════════════════════════════════════
-async function handleZipFile(file) {
+function fileKey(filename) {
+  const b = baseName(filename);
+  // strip trailing _1 _2 etc for followers
+  const stripped = b.replace(/_\d+$/, '');
+  return FILE_MAP[b] || FILE_MAP[stripped] || null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FILE LOADING
+// ═══════════════════════════════════════════════════════════════════════
+async function handleZip(file) {
   if (!file) return;
-  if (typeof JSZip === "undefined") {
-    toast("JSZip library not loaded. Check your internet connection.");
-    return;
-  }
-  updateDZ("⏳", "Reading ZIP…", file.name, false);
+  if (typeof JSZip === 'undefined') { toast('JSZip not loaded — check your internet connection'); return; }
+  setDZ('⏳', 'Reading ZIP…', file.name, false);
   try {
     const zip = await JSZip.loadAsync(file);
-    let found = 0;
-    const keys = Object.keys(FILE_NAMES);
-
-    for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
-      if (zipEntry.dir) continue;
-      const base = zipPath.split("/").pop();
-      const key  = filenameToKey(base);
-      if (key) {
-        const text = await zipEntry.async("string");
-        STATE[key] = parseUsers(text);
-        loadLog[key] = zipPath;
-        found++;
-      }
-      // extra followers_N.json
-      if (base.startsWith("followers_") && base.endsWith(".json") && base !== "followers_1.json") {
-        const text  = await zipEntry.async("string");
-        const extra = parseUsers(text);
-        const existing = new Set(STATE.followers.map(u => u.username));
-        extra.forEach(u => { if (!existing.has(u.username)) { STATE.followers.push(u); existing.add(u.username); }});
-        loadLog["extra:" + base] = zipPath;
-      }
+    const tasks = [];
+    for (const [path, entry] of Object.entries(zip.files)) {
+      if (entry.dir) continue;
+      tasks.push(entry.async('string').then(text => ({ path, text })));
     }
-    onLoaded(file.name, found);
+    const results = await Promise.all(tasks);
+    results.forEach(({ path, text }) => {
+      const key = fileKey(path);
+      if (!key) return;
+      const users = parseUsers(text);
+      if (key === 'followers') {
+        // merge multiple followers_N files
+        const existing = new Set(S.followers.map(u => u.username));
+        users.forEach(u => { if (!existing.has(u.username)) { S.followers.push(u); existing.add(u.username); }});
+      } else {
+        S[key] = users;
+      }
+      loadLog[key] = path;
+    });
+    onLoaded(file.name);
   } catch(e) {
-    toast("Error reading ZIP: " + e.message);
-    updateDZ("❌", "Error reading file", e.message, false);
+    setDZ('❌', 'Error reading ZIP', e.message, false);
+    toast('Error: ' + e.message);
   }
 }
 
 function handleJsonFiles(files) {
-  let found = 0;
+  let done = 0;
   Array.from(files).forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
-      const key = filenameToKey(file.name);
+      const key = fileKey(file.name);
       if (key) {
-        STATE[key] = parseUsers(e.target.result);
+        if (key === 'followers') {
+          const existing = new Set(S.followers.map(u => u.username));
+          parseUsers(e.target.result).forEach(u => {
+            if (!existing.has(u.username)) { S.followers.push(u); existing.add(u.username); }
+          });
+        } else {
+          S[key] = parseUsers(e.target.result);
+        }
         loadLog[key] = file.name;
-        found++;
+        done++;
       }
-      if (found > 0) onLoaded("selected files", found);
-      updatePills(); runAnalysis(); refreshTable();
+      if (done === files.length) onLoaded('selected files');
+      else onLoaded('loading…');
     };
     reader.readAsText(file);
   });
 }
 
-function onLoaded(name, found) {
-  updatePills();
-  runAnalysis();
-  refreshTable();
-  const total = Object.values(STATE).reduce((s,a)=>s+a.length,0);
-  updateDZ("✅", `Loaded: ${name}`, `${STATE.followers.length} followers · ${STATE.following.length} following · ${found} files found`, true);
+function onLoaded(name) {
+  detectDateRange();
+  buildPills();
+  renderStats();
+  renderTable();
+  renderAttention();
+  updateTabCounts();
+
+  const total = Object.values(S).reduce((a, b) => a + b.length, 0);
+  const files = Object.keys(loadLog).length;
+  setDZ('✅', 'Loaded: ' + name,
+    S.followers.length + ' followers · ' + S.following.length + ' following · ' + files + ' files found', true);
+  updateHeaderStats();
+  toast('✅ Loaded ' + total + ' entries from ' + files + ' files');
 }
 
-function updateDZ(icon, title, sub, loaded) {
-  document.getElementById("dz-icon").textContent  = icon;
-  document.getElementById("dz-title").textContent = title;
-  document.getElementById("dz-sub").textContent   = sub;
-  document.getElementById("drop-zone").classList.toggle("loaded", loaded);
-}
-
-function updatePills() {
-  Object.entries(FILE_LABELS).forEach(([key, [label, color]]) => {
-    const p = document.getElementById("pill-" + key);
-    if (!p) return;
-    const arr = STATE[key] || [];
-    if (arr.length) {
-      p.textContent = `✅ ${label} (${arr.length})`;
-      p.style.color = color;
-      p.classList.add("loaded");
-    } else {
-      p.textContent = `○ ${label}`;
-      p.style.color = "";
-      p.classList.remove("loaded");
+function setDZ(icon, title, sub, loaded) {
+  document.getElementById('dz-icon').textContent  = icon;
+  document.getElementById('dz-title').textContent = title;
+  document.getElementById('dz-sub').textContent   = sub;
+  document.getElementById('drop-zone').classList.toggle('loaded', loaded);
+  if (loaded) {
+    const det = document.getElementById('dz-detected');
+    if (globalMin && globalMax) {
+      det.style.display = 'inline-block';
+      det.textContent = '📆 Detected data range: ' + fmtDate(globalMin) + ' → ' + fmtDate(globalMax);
     }
-  });
+  }
 }
 
-// ═══════════════════════ ANALYSIS ════════════════════════════════════════════
-function runAnalysis() {
-  const frs  = new Set(STATE.followers.map(u=>u.username));
-  const fing = new Set(STATE.following.map(u=>u.username));
-  const now  = Date.now() / 1000;
-  const cutoff = now - 180 * 86400;
+// ═══════════════════════════════════════════════════════════════════════
+// DATE RANGE
+// ═══════════════════════════════════════════════════════════════════════
+function detectDateRange() {
+  const allTs = [];
+  Object.values(S).forEach(arr => arr.forEach(u => { if (u.timestamp) allTs.push(u.timestamp); }));
+  if (!allTs.length) return;
+  allTs.sort((a,b) => a-b);
+  globalMin = allTs[0];
+  globalMax = allTs[allTs.length - 1];
 
-  const nfb    = [...fing].filter(u => !frs.has(u)).length;
-  const fans   = [...frs].filter(u => !fing.has(u)).length;
-  const mutual = [...frs].filter(u => fing.has(u)).length;
-  const ghost  = STATE.followers.filter(u => (u.timestamp || now) < cutoff).length;
-  const ratio  = fing.size ? (frs.size / fing.size).toFixed(2) : "—";
+  const fromEl = document.getElementById('date-from');
+  const toEl   = document.getElementById('date-to');
+  fromEl.value = tsToInputDate(globalMin);
+  toEl.value   = tsToInputDate(globalMax);
 
-  document.getElementById("s-followers").textContent = frs.size  || "—";
-  document.getElementById("s-following").textContent = fing.size || "—";
-  document.getElementById("s-nfb").textContent       = nfb    || "—";
-  document.getElementById("s-fans").textContent      = fans   || "—";
-  document.getElementById("s-mutual").textContent    = mutual || "—";
-  document.getElementById("s-ratio").textContent     = ratio;
-  document.getElementById("s-ghost").textContent     = ghost  || "—";
-  document.getElementById("s-pending").textContent   = STATE.pending_requests.length || "—";
+  document.getElementById('range-detected').textContent =
+    'Detected: ' + fmtDate(globalMin) + ' → ' + fmtDate(globalMax) + ' (' + allTs.length + ' timestamps)';
+  document.getElementById('range-panel').classList.add('visible');
+  updateRangeBadge();
 }
 
-// ═══════════════════════ TABLE ════════════════════════════════════════════════
-function getCurrentData() {
-  const frs  = new Set(STATE.followers.map(u=>u.username));
-  const fing = new Set(STATE.following.map(u=>u.username));
-  const now  = Date.now() / 1000;
-  const cutoff = now - 180 * 86400;
+function updateRangeBadge() {
+  const from = getFromTs();
+  const to   = getToTs();
+  if (!from || !to || !globalMin || !globalMax) return;
+  const data = getActiveData();
+  const badge = document.getElementById('range-badge');
+  badge.textContent = data.length + ' users in range';
+  const isFiltered = from > globalMin || to < globalMax;
+  badge.className = 'range-badge' + (isFiltered ? '' : '');
+  document.getElementById('filter-badge').style.display = isFiltered ? 'block' : 'none';
+}
 
-  switch(currentTab) {
-    case "not_following_back":  return STATE.following.filter(u => !frs.has(u.username));
-    case "fans":                return STATE.followers.filter(u => !fing.has(u.username));
-    case "mutual":              return STATE.followers.filter(u => fing.has(u.username));
-    case "ghost_followers":     return STATE.followers.filter(u => (u.timestamp||now) < cutoff);
-    case "story_hiders":        return [...STATE.hide_story];
-    case "recently_unfollowed": return [...STATE.unfollowed];
-    case "pending_requests":    return [...STATE.pending_requests];
-    case "recent_requests":     return [...STATE.recent_requests];
-    case "removed_suggestions": return [...STATE.removed_suggestions];
-    case "all_followers":       return [...STATE.followers];
-    case "all_following":       return [...STATE.following];
+function getFromTs() {
+  const v = document.getElementById('date-from').value;
+  return v ? new Date(v).getTime() / 1000 : null;
+}
+function getToTs() {
+  const v = document.getElementById('date-to').value;
+  if (!v) return null;
+  const d = new Date(v); d.setHours(23,59,59);
+  return d.getTime() / 1000;
+}
+function isInRange(ts) {
+  const from = getFromTs(), to = getToTs();
+  if (!from || !to) return true;
+  if (!ts) return true;
+  return ts >= from && ts <= to;
+}
+function resetDateRange() {
+  if (!globalMin || !globalMax) return;
+  document.getElementById('date-from').value = tsToInputDate(globalMin);
+  document.getElementById('date-to').value   = tsToInputDate(globalMax);
+  applyFilters();
+}
+function applyFilters() {
+  updateRangeBadge();
+  renderTable();
+  renderAttention();
+  updateTabCounts();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// THRESHOLDS
+// ═══════════════════════════════════════════════════════════════════════
+function loadThr() {
+  try {
+    const s = localStorage.getItem('is_thr');
+    if (s) THR = JSON.parse(s);
+  } catch(e) {}
+  document.getElementById('thr-nfb').value     = THR.nfb;
+  document.getElementById('thr-pending').value = THR.pending;
+  document.getElementById('thr-ghost').value   = THR.ghost;
+}
+function saveThr() {
+  THR.nfb     = parseInt(document.getElementById('thr-nfb').value)     || 7;
+  THR.pending = parseInt(document.getElementById('thr-pending').value) || 15;
+  THR.ghost   = parseInt(document.getElementById('thr-ghost').value)   || 180;
+  try { localStorage.setItem('is_thr', JSON.stringify(THR)); } catch(e) {}
+}
+function toggleSettings() {
+  const p = document.getElementById('thr-panel');
+  p.classList.toggle('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATUS LOGIC
+// ═══════════════════════════════════════════════════════════════════════
+function getStatus(user, tabContext) {
+  const days = daysAgoNum(user.timestamp);
+  if (days === null) return { level: 'none', label: '—', sort: 99 };
+
+  if (tabContext === 'pending_requests') {
+    if (days >= THR.pending) return { level: 'expired', label: '🔴 EXPIRED (' + days + 'd)', sort: 0 };
+    if (days >= THR.pending * 0.7) return { level: 'aging',   label: '🟠 Expiring soon (' + days + 'd)', sort: 1 };
+    if (days >= 3)                 return { level: 'recent',  label: '🟡 Sent ' + days + 'd ago', sort: 2 };
+    return { level: 'fresh', label: '🟢 Just sent', sort: 3 };
+  }
+  if (tabContext === 'mutual') {
+    if (days >= 180) return { level: 'expired', label: '👻 Ghost mutual (' + days + 'd)', sort: 0 };
+    if (days >= 30)  return { level: 'aging',   label: '🟠 Old mutual (' + days + 'd)', sort: 1 };
+    return { level: 'mutual', label: '✅ Active', sort: 3 };
+  }
+  if (days >= THR.nfb * 2) return { level: 'expired', label: '🔴 Old (' + days + 'd) — unfollow?', sort: 0 };
+  if (days >= THR.nfb)     return { level: 'aging',   label: '🟠 ' + days + 'd ago — consider unfollow?', sort: 1 };
+  if (days >= 3)           return { level: 'recent',  label: '🟡 ' + days + 'd ago', sort: 2 };
+  return { level: 'fresh', label: '🟢 Just followed', sort: 3 };
+}
+
+function statusBadge(status) {
+  const map = { fresh:'fresh', recent:'recent', aging:'aging', expired:'expired', mutual:'mutual', none:'' };
+  const cls = map[status.level] || '';
+  return `<span class="sbadge ${cls}"><span class="dot"></span>${status.label}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DATA SELECTORS
+// ═══════════════════════════════════════════════════════════════════════
+function getTabData(tab) {
+  const frs  = new Set(S.followers.map(u => u.username));
+  const fing = new Set(S.following.map(u => u.username));
+  const nowSec = Date.now() / 1000;
+  const ghostCutoff = nowSec - THR.ghost * 86400;
+
+  switch(tab) {
+    case 'not_following_back':  return S.following.filter(u => !frs.has(u.username));
+    case 'fans':                return S.followers.filter(u => !fing.has(u.username));
+    case 'mutual':              return S.followers.filter(u => fing.has(u.username));
+    case 'ghost_followers':     return S.followers.filter(u => (u.timestamp || nowSec) < ghostCutoff);
+    case 'story_hiders':        return [...S.hide_story];
+    case 'recently_unfollowed': return [...S.unfollowed];
+    case 'pending_requests':    return [...S.pending_requests];
+    case 'recent_requests':     return [...S.recent_requests];
+    case 'removed_suggestions': return [...S.removed_suggestions];
+    case 'all_followers':       return [...S.followers];
+    case 'all_following':       return [...S.following];
+    case 'needs_attention':     return getNeedsAttention();
     default: return [];
   }
 }
 
-function fmtTs(ts) {
-  if (!ts) return "—";
-  try { return new Date(ts * 1000).toISOString().slice(0,10); }
-  catch(e) { return "—"; }
-}
-function daysAgo(ts) {
-  if (!ts) return "—";
-  return Math.floor((Date.now()/1000 - ts) / 86400);
-}
-function cleanUrl(username) {
-  const u = username.replace(/^@/, "").trim();
-  return u ? `https://www.instagram.com/${u}` : "#";
+function getNeedsAttention() {
+  const frs  = new Set(S.followers.map(u => u.username));
+  const out  = [];
+  // non-mutuals followed >= THR.nfb days
+  S.following.filter(u => !frs.has(u.username)).forEach(u => {
+    const d = daysAgoNum(u.timestamp);
+    if (d !== null && d >= THR.nfb) out.push({...u, _reason:'Not following back · ' + d + 'd'});
+  });
+  // expired pending
+  S.pending_requests.forEach(u => {
+    const d = daysAgoNum(u.timestamp);
+    if (d !== null && d >= THR.pending) out.push({...u, _reason:'Pending expired · ' + d + 'd'});
+  });
+  return out;
 }
 
-function refreshTable() {
-  let data  = getCurrentData();
-  const q   = document.getElementById("search").value.trim().toLowerCase();
-  if (q) data = data.filter(u => u.username.toLowerCase().includes(q));
+function getActiveData() {
+  let data = getTabData(currentTab);
+  data = data.filter(u => isInRange(u.timestamp));
+  return data;
+}
 
-  if (sortCol && sortCol !== "#") {
-    data = [...data].sort((a,b) => {
-      let va, vb;
-      if      (sortCol === "Username")  { va = a.username; vb = b.username; }
-      else if (sortCol === "Date")      { va = a.timestamp||0; vb = b.timestamp||0; return sortReverse ? va-vb : vb-va; }
-      else if (sortCol === "Days Ago")  { va = a.timestamp||0; vb = b.timestamp||0; return sortReverse ? vb-va : va-vb; }
-      else { va = a.username; vb = b.username; }
-      return sortReverse ? vb.localeCompare(va) : va.localeCompare(vb);
-    });
-  }
+// ═══════════════════════════════════════════════════════════════════════
+// RENDER TABLE
+// ═══════════════════════════════════════════════════════════════════════
+function renderTable() {
+  let data = getActiveData();
+  const q  = document.getElementById('search').value.trim().toLowerCase();
+  if (q) data = data.filter(u => (u.username || '').toLowerCase().includes(q));
 
-  const tbody = document.getElementById("table-body");
-  const empty = document.getElementById("empty-state");
+  // sort
+  data = [...data].sort((a, b) => {
+    let va, vb;
+    if      (sortCol === 'username') { va = a.username || ''; vb = b.username || ''; return sortRev ? vb.localeCompare(va) : va.localeCompare(vb); }
+    else if (sortCol === 'date' || sortCol === 'days') { va = a.timestamp || 0; vb = b.timestamp || 0; return sortRev ? va-vb : vb-va; }
+    else if (sortCol === 'status') {
+      const sa = getStatus(a, currentTab).sort, sb = getStatus(b, currentTab).sort;
+      return sortRev ? sb-sa : sa-sb;
+    }
+    return 0;
+  });
+
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty-state');
 
   if (!data.length) {
-    tbody.innerHTML = "";
-    empty.style.display = "block";
-    document.getElementById("count-lbl").textContent = "";
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('count-badge').textContent = '0 users';
     return;
   }
-  empty.style.display = "none";
-  document.getElementById("count-lbl").textContent = `${data.length} users`;
+  empty.style.display = 'none';
+  document.getElementById('count-badge').textContent = data.length + ' users';
 
   tbody.innerHTML = data.map((u, i) => {
-    const uname = u.username || "—";
-    const url   = cleanUrl(uname);
-    const date  = fmtTs(u.timestamp);
-    const days  = daysAgo(u.timestamp);
-    return `<tr ondblclick="window.open('${url}','_blank')">
-      <td class="num">${i+1}</td>
-      <td class="username">@${uname}</td>
-      <td class="link"><a href="${url}" target="_blank" rel="noopener">${url}</a></td>
-      <td class="date">${date}</td>
-      <td class="days">${days}</td>
+    const uname  = u.username || '—';
+    const url    = 'https://www.instagram.com/' + uname.replace(/^@/, '');
+    const dtInfo = fmtDateFull(u.timestamp);
+    const days   = daysAgoNum(u.timestamp);
+    const status = getStatus(u, currentTab);
+    const reason = u._reason ? `<div style="font-size:10px;color:var(--orange);font-family:var(--mono);margin-top:2px">${u._reason}</div>` : '';
+    return `<tr>
+      <td class="idx">${i+1}</td>
+      <td class="uname" onclick="window.open('${url}','_blank')"><span class="at">@</span>${esc(uname)}</td>
+      <td class="link-cell"><a href="${url}" target="_blank" rel="noopener">instagram.com/${esc(uname)}</a></td>
+      <td class="date-cell">${dtInfo.full}${reason}</td>
+      <td class="days-cell" style="color:${daysColor(days)}">${days !== null ? days + 'd' : '—'}</td>
+      <td class="status-cell">${statusBadge(status)}</td>
     </tr>`;
-  }).join("");
+  }).join('');
 }
 
+function daysColor(d) {
+  if (d === null) return 'var(--sub)';
+  if (d < 3)  return 'var(--green)';
+  if (d < 7)  return 'var(--yellow)';
+  if (d < 14) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════════════════════════
+function renderStats() {
+  const frs  = new Set(S.followers.map(u => u.username));
+  const fing = new Set(S.following.map(u => u.username));
+  const nfb  = [...fing].filter(u => !frs.has(u)).length;
+  const fans = [...frs].filter(u => !fing.has(u)).length;
+  const mut  = [...frs].filter(u =>  fing.has(u)).length;
+  const ghost= S.followers.filter(u => daysAgoNum(u.timestamp) >= THR.ghost).length;
+  const expired = S.pending_requests.filter(u => daysAgoNum(u.timestamp) >= THR.pending).length;
+  const ratio= fing.size ? (frs.size / fing.size).toFixed(2) : '—';
+  const attn = getNeedsAttention().length;
+
+  const stats = [
+    { id:'s-fr',  val: frs.size  || '—', lbl:'Followers',           color:'var(--purple)' },
+    { id:'s-fg',  val: fing.size || '—', lbl:'Following',           color:'var(--accent)' },
+    { id:'s-nfb', val: nfb || '—',       lbl:'Not Following Back',  color:'var(--red)' },
+    { id:'s-fans',val: fans || '—',       lbl:'Your Fans',           color:'var(--green)' },
+    { id:'s-mut', val: mut || '—',        lbl:'Mutual',              color:'var(--yellow)' },
+    { id:'s-ratio',val:ratio,             lbl:'Follow-back Ratio',   color:'var(--blue)' },
+    { id:'s-ghost',val:ghost || '—',      lbl:'Ghost Followers',     color:'var(--sub)' },
+    { id:'s-exp',  val:expired || '—',    lbl:'Expired Pending',     color:'var(--orange)' },
+    { id:'s-attn', val:attn || '—',       lbl:'Needs Attention',     color:'var(--red)' },
+  ];
+
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = stats.map(s => `
+    <div class="stat-card" style="border-top-color:${s.color}" onclick="if('${s.id}'==='s-attn')switchTab('needs_attention')">
+      <div class="stat-val" style="color:${s.color}">${s.val}</div>
+      <div class="stat-lbl">${s.lbl}</div>
+    </div>`).join('');
+}
+
+function updateHeaderStats() {
+  document.getElementById('h-fr').textContent = S.followers.length || '—';
+  document.getElementById('h-fg').textContent = S.following.length || '—';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ATTENTION BANNER
+// ═══════════════════════════════════════════════════════════════════════
+function renderAttention() {
+  const frs  = new Set(S.followers.map(u => u.username));
+  const bar  = document.getElementById('attn-bar');
+  const items= document.getElementById('attn-items');
+
+  const nfbOld  = S.following.filter(u => !frs.has(u.username) && daysAgoNum(u.timestamp) >= THR.nfb && isInRange(u.timestamp)).length;
+  const nfbVOld = S.following.filter(u => !frs.has(u.username) && daysAgoNum(u.timestamp) >= THR.nfb*2 && isInRange(u.timestamp)).length;
+  const expPend = S.pending_requests.filter(u => daysAgoNum(u.timestamp) >= THR.pending && isInRange(u.timestamp)).length;
+
+  const chips = [];
+  if (nfbVOld)  chips.push(`<span class="attn-chip red" onclick="switchTab('not_following_back')">🔴 ${nfbVOld} very old non-followers (${THR.nfb*2}d+)</span>`);
+  else if(nfbOld) chips.push(`<span class="attn-chip yellow" onclick="switchTab('not_following_back')">🟡 ${nfbOld} non-followers (${THR.nfb}d+)</span>`);
+  if (expPend)  chips.push(`<span class="attn-chip red" onclick="switchTab('pending_requests')">🔴 ${expPend} expired pending (${THR.pending}d+)</span>`);
+
+  if (!chips.length) { bar.classList.remove('visible'); return; }
+  items.innerHTML = chips.join('');
+  bar.classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════════
+function buildTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  TABS.forEach(([key, label]) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (key === currentTab ? ' active' : '');
+    b.id = 'tab-' + key;
+    b.innerHTML = label + ' <span class="tab-count" id="tc-' + key + '">0</span>';
+    b.onclick = () => switchTab(key);
+    bar.appendChild(b);
+  });
+}
+
+function switchTab(key) {
+  currentTab = key;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const b = document.getElementById('tab-' + key);
+  if (b) b.classList.add('active');
+  document.getElementById('search').value = '';
+  renderTable();
+  updateRangeBadge();
+}
+
+function updateTabCounts() {
+  TABS.forEach(([key]) => {
+    const el = document.getElementById('tc-' + key);
+    if (!el) return;
+    const count = getTabData(key).filter(u => isInRange(u.timestamp)).length;
+    el.textContent = count;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PILLS
+// ═══════════════════════════════════════════════════════════════════════
+function buildPills() {
+  const c = document.getElementById('pills');
+  c.innerHTML = Object.entries(FILE_META).map(([key, {label, color}]) => {
+    const arr = S[key] || [];
+    const ok  = arr.length > 0;
+    return `<span class="pill ${ok ? 'ok' : ''}" style="${ok ? 'border-color:'+color+';color:'+color : ''}">${ok ? '✅' : '○'} ${label}${ok ? ' ('+arr.length+')' : ''}</span>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SORT
+// ═══════════════════════════════════════════════════════════════════════
 function sortBy(col) {
-  if (sortCol === col) sortReverse = !sortReverse;
-  else { sortCol = col; sortReverse = false; }
-  document.querySelectorAll(".sort-arrow").forEach(el => el.textContent = "");
-  const arrow = document.getElementById("sa-" + col);
-  if (arrow) arrow.textContent = sortReverse ? " ↑" : " ↓";
-  refreshTable();
+  if (sortCol === col) sortRev = !sortRev;
+  else { sortCol = col; sortRev = false; }
+  document.querySelectorAll('.sa').forEach(el => el.textContent = '');
+  const el = document.getElementById('sa-' + col);
+  if (el) el.textContent = sortRev ? ' ↑' : ' ↓';
+  renderTable();
 }
 
-// ═══════════════════════ ACTIONS ══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════════════════
 function exportCSV() {
-  const data = getCurrentData();
-  if (!data.length) { toast("No data to export."); return; }
-  const rows = [["Username","Profile Link","Date","Days Ago"],
-    ...data.map(u => [u.username, cleanUrl(u.username), fmtTs(u.timestamp), daysAgo(u.timestamp)])];
-  const csv = rows.map(r => r.map(v=>`"${v}"`).join(",")).join("\n");
-  const blob = new Blob([csv], {type:"text/csv"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `instascope_${currentTab}.csv`;
+  const data = getActiveData();
+  if (!data.length) { toast('No data to export'); return; }
+  const from = document.getElementById('date-from').value;
+  const to   = document.getElementById('date-to').value;
+  const isFiltered = globalMin && (getFromTs() > globalMin || getToTs() < globalMax);
+
+  const rows = [['Username','Profile Link','Followed On','Full Date','Day Name','Days Ago','Status','In Selected Range']];
+  data.forEach(u => {
+    const uname  = u.username || '';
+    const url    = 'https://www.instagram.com/' + uname;
+    const dtInfo = fmtDateFull(u.timestamp);
+    const days   = daysAgoNum(u.timestamp);
+    const status = getStatus(u, currentTab);
+    rows.push([uname, url, dtInfo.date, dtInfo.full, dtInfo.day, days !== null ? days : '', status.label, isInRange(u.timestamp) ? 'Yes' : 'No']);
+  });
+  const csv  = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'instascope_' + currentTab + '.csv';
   a.click();
-  toast(`Exported ${data.length} rows`);
+  toast('Exported ' + (rows.length-1) + ' rows');
 }
 
 function copyAll() {
-  const data = getCurrentData();
-  if (!data.length) { toast("No data to copy."); return; }
-  navigator.clipboard.writeText(data.map(u=>u.username).join("\n")).then(() => {
-    toast(`Copied ${data.length} usernames`);
-  }).catch(() => toast("Copy failed — try a different browser"));
+  const data = getActiveData();
+  if (!data.length) { toast('No data to copy'); return; }
+  const text = data.map(u => u.username).filter(Boolean).join('\n');
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Copied ' + data.length + ' usernames'))
+    .catch(() => toast('Copy failed — try a different browser'));
 }
 
 function showLog() {
-  const modal = document.getElementById("log-modal");
-  const pre   = document.getElementById("log-content");
-  if (!Object.keys(loadLog).length) {
-    pre.textContent = "No export loaded yet.";
-  } else {
-    let txt = "";
+  const pre = document.getElementById('log-pre');
+  if (!Object.keys(loadLog).length) { pre.textContent = 'No export loaded yet.'; }
+  else {
+    let txt = '';
     Object.entries(loadLog).forEach(([key, path]) => {
-      const arr = STATE[key] || [];
-      const count = Array.isArray(arr) ? arr.length : "?";
-      txt += `✅  ${key.padEnd(28)} →  ${String(count).padStart(4)} entries\n     ${path}\n\n`;
+      const arr = S[key] || [];
+      txt += `✅  ${key.padEnd(25)} →  ${String(arr.length).padStart(4)} entries\n     ${path}\n\n`;
     });
-    const notFound = Object.keys(FILE_NAMES).filter(k => !loadLog[k]);
-    if (notFound.length) {
-      txt += "── Not found in export ──\n";
-      notFound.forEach(k => { txt += `○  ${k}\n`; });
+    const missing = Object.keys(FILE_META).filter(k => !loadLog[k]);
+    if (missing.length) {
+      txt += '── Not found in export ──\n';
+      missing.forEach(k => { txt += `○  ${k}\n`; });
     }
     pre.textContent = txt;
   }
-  modal.classList.add("open");
+  document.getElementById('log-modal').classList.add('open');
 }
 
-// ═══════════════════════ CHARTS ═══════════════════════════════════════════════
-let chartsOpen = false;
+// ═══════════════════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════════════════
 function toggleCharts() {
   chartsOpen = !chartsOpen;
-  document.getElementById("chart-section").classList.toggle("open", chartsOpen);
+  document.getElementById('chart-wrap').classList.toggle('open', chartsOpen);
   if (chartsOpen) renderCharts();
 }
 
 function renderCharts() {
-  const frs  = new Set(STATE.followers.map(u=>u.username));
-  const fing = new Set(STATE.following.map(u=>u.username));
+  const frs  = new Set(S.followers.map(u => u.username));
+  const fing = new Set(S.following.map(u => u.username));
+  const nfb  = [...fing].filter(u => !frs.has(u)).length;
+  const fans = [...frs].filter(u => !fing.has(u)).length;
+  const mut  = [...frs].filter(u =>  fing.has(u)).length;
 
-  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  if (chartInst1) { chartInst1.destroy(); chartInst1 = null; }
+  if (chartInst2) { chartInst2.destroy(); chartInst2 = null; }
 
-  const canvas = document.getElementById("chart-canvas");
-  const ctx    = canvas.getContext("2d");
+  const chartDark = { color:'#6b7f96', grid:'#1f2d3d', bg:'#0e1318' };
 
-  const nfb  = [...fing].filter(u=>!frs.has(u)).length;
-  const fans = [...frs].filter(u=>!fing.has(u)).length;
-  const mut  = [...frs].filter(u=>fing.has(u)).length;
+  if (nfb + fans + mut > 0) {
+    chartInst1 = new Chart(document.getElementById('chart-overview').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Not Following Back', 'Your Fans', 'Mutual'],
+        datasets: [{ data:[nfb,fans,mut], backgroundColor:['#ef4444','#22c55e','#eab308'], borderColor:'#0e1318', borderWidth:3 }]
+      },
+      options: {
+        plugins: {
+          legend: { labels: { color:'#eef2f7', font:{size:12,family:'Outfit'} } },
+          title:  { display:true, text:'Account Overview', color:'#eef2f7', font:{size:14} }
+        }
+      }
+    });
+  }
 
-  if (!nfb && !fans && !mut) { return; }
+  // Bar chart: breakdown
+  const counts = [S.followers.length, S.following.length, nfb, fans, mut,
+                  S.pending_requests.length, S.unfollowed.length];
+  const labels = ['Followers','Following','Not Back','Fans','Mutual','Pending','Unfollowed'];
+  const colors = ['#a855f7','#e1306c','#ef4444','#22c55e','#eab308','#f97316','#6b7f96'];
 
-  chartInstance = new Chart(ctx, {
-    type: "doughnut",
+  chartInst2 = new Chart(document.getElementById('chart-bar').getContext('2d'), {
+    type: 'bar',
     data: {
-      labels: ["Not Following Back", "Your Fans", "Mutual"],
-      datasets: [{
-        data: [nfb, fans, mut],
-        backgroundColor: ["#f85149", "#3fb950", "#d29922"],
-        borderColor: "#161b22", borderWidth: 3,
-      }]
+      labels,
+      datasets: [{ data:counts, backgroundColor:colors, borderRadius:6 }]
     },
     options: {
-      responsive: true,
       plugins: {
-        legend: { labels: { color: "#f0f6fc", font: { size: 13 } } },
-        title: { display: true, text: "Account Relationship Overview",
-                 color: "#f0f6fc", font: { size: 15 } }
+        legend: { display:false },
+        title:  { display:true, text:'Account Breakdown', color:'#eef2f7', font:{size:14} }
+      },
+      scales: {
+        x: { ticks:{color:'#6b7f96',font:{size:11}}, grid:{color:'#1f2d3d'} },
+        y: { ticks:{color:'#6b7f96'}, grid:{color:'#1f2d3d'} }
       }
     }
   });
 }
 
-// ═══════════════════════ DRAG & DROP ══════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════════════════════════════════
 function setupDragDrop() {
-  const dz = document.getElementById("drop-zone");
-  dz.addEventListener("dragover",  e => { e.preventDefault(); dz.classList.add("drag-over"); });
-  dz.addEventListener("dragleave", e => dz.classList.remove("drag-over"));
-  dz.addEventListener("drop", e => {
-    e.preventDefault();
-    dz.classList.remove("drag-over");
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    if (file.name.endsWith(".zip")) handleZipFile(file);
-    else toast("Please drop a .zip file.");
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    if (f.name.endsWith('.zip')) handleZip(f);
+    else toast('Please drop a .zip file');
   });
 }
 
-// ═══════════════════════ TOAST ════════════════════════════════════════════════
-let _toastTimer = null;
-function toast(msg) {
-  const el = document.getElementById("toast");
-  el.textContent = msg;
-  el.classList.add("show");
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
+// ═══════════════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function fmtDateFull(ts) {
+  if (!ts) return { full:'—', date:'—', day:'—', time:'—' };
+  const d = new Date(ts * 1000);
+  const date  = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  const time  = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const day   = DAYS[d.getDay()];
+  return { full: date + ' ' + time + ' • ' + day, date, time, day };
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts * 1000);
+  return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+}
+function tsToInputDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+}
+function daysAgoNum(ts) {
+  if (!ts) return null;
+  return Math.floor((Date.now()/1000 - ts) / 86400);
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Boot ─────────────────────────────────────────────────────────────────────
-init();
+let _toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── close modal on backdrop click ─────────────────────────────────────
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ── BOOT ──────────────────────────────────────────────────────────────
+boot();
 </script>
 </body>
 </html>
